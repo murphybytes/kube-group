@@ -65,11 +65,6 @@ func Watch(ctx context.Context, service string, notifier NotifyFn, options ...Wa
 		optFn(&cfg)
 	}
 
-	// test to see if the dns name for the service exists
-	if _, err := GroupIPs(service); err != nil {
-		return nil, fmt.Errorf("could not get IPs for service %q %w", service, err)
-	}
-
 	newCtx, cancelFn := context.WithCancel(ctx)
 	groupMemberFn := func(ctx context.Context) ([]string, error) {
 		return GroupIPs(service)
@@ -91,9 +86,10 @@ func watch(ctx context.Context, notifyFn NotifyFn,
 		case <-ctx.Done():
 			return
 		case <-c:
+			log.Println("checking for new peers")
 			currentAddrs, err := groupFn(ctx)
 			if err != nil {
-				log.Fatalf("could not fetch ips of pods %s", err)
+				log.Printf("could not fetch ips of pods %s", err)
 			}
 			// create a string from ip addresses that we
 			// can use to compare this set of IPs with the
