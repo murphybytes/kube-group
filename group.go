@@ -30,14 +30,17 @@ func LocalIP() (string, error) {
 	return localAddr.IP.String(), nil
 }
 
-func GroupIPs(ctx context.Context, serviceName string) ([]string, error) {
-	var resolver net.Resolver
-	ips, err := resolver.LookupHost(ctx, serviceName)
+func GroupIPs(serviceName string) ([]string, error) {
+	ips, err := net.LookupIP(serviceName)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve peer ip addresses. %w", err)
 	}
 
-	return ips, nil
+	var results []string
+	for _, ip := range ips {
+		results = append(results, ip.String())
+	}
+	return results, nil
 }
 
 type NotifyFn func(ips []string) error
@@ -63,13 +66,13 @@ func Watch(ctx context.Context, service string, notifier NotifyFn, options ...Wa
 	}
 
 	// test to see if the dns name for the service exists
-	if _, err := GroupIPs(ctx, service); err != nil {
+	if _, err := GroupIPs(service); err != nil {
 		return nil, fmt.Errorf("could not get IPs for service %q %w", service, err)
 	}
 
 	newCtx, cancelFn := context.WithCancel(ctx)
 	groupMemberFn := func(ctx context.Context) ([]string, error) {
-		return GroupIPs(ctx, service)
+		return GroupIPs(service)
 	}
 	ticker := time.NewTicker(cfg.checkFrequency)
 
